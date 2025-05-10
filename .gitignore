@@ -1,0 +1,20 @@
+# Ignore object files and binaries
+*.o
+*.exe
+*.out
+*.trc
+*.txt
+
+# Ignore all log files
+*.log
+
+# Ignore build and temp folders
+build/
+temp/
+
+# Ignore VS Code settings (example)
+.vscode/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
