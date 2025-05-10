@@ -7,9 +7,9 @@
 
 for i in {4..149}
 do
-    input_file="example${i}.trc"
+    input_file="small_btb_example${i}.trc"
     output_file="out${i}.out"
-    expected_file="example${i}.out"
+    expected_file="small_btb_example${i}.out"
 
     echo "Running test $i..."
     ./bp_main "$input_file" > "$output_file"

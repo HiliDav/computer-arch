@@ -361,7 +361,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
         if(is_global_hist)
         {
             // Global history, Local FSMs table 
-            history_num = hist_vec_to_number(history0,pc);
+            history_num = hist_vec_to_number(hist_list[0],pc);
             FSM_table_list[entry] = FSMs_table0;
             FSM_table_list[entry][history_num] += update_fsm(taken, fsm_state);
         }
@@ -379,7 +379,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
         if(is_global_hist)
         {
             // Global history, Local FSMs table 
-            history_num = hist_vec_to_number(hist_list[0],pc); //todo 
+            history_num = hist_vec_to_number(hist_list[0],pc);  
             state = FSM_table_list[entry][history_num];
             FSM_table_list[entry][history_num] += update_fsm(taken, state);
         }

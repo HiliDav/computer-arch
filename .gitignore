@@ -4,6 +4,7 @@
 *.out
 *.trc
 *.txt
+*.sh
 
 # Ignore all log files
 *.log
