@@ -308,36 +308,6 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
     }
 
 
-/*
-    // Branch exists
-    // if the tags doesn't match, update the whole Branch row
-    if(pc_tag != it->tag)
-    {
-        it->tag = pc_tag;
-        it->target_pc = targetPc;
-    }
-
-    // tags match - there is relevant row in BTB
-    else
-    {
-        // targets doesn't match - the prediction was a miss
-        if(targetPc != it->target_pc)
-        {
-            flush_count++;
-            it->target_pc = targetPc;
-        }
-        //targets match. check if prediction was hit
-        else
-        {
-            uint32_t dummy;
-            prediction = BP_predict(pc, &dummy);
-            // if prediction was a miss, need to add flush count
-            if(prediction != taken)
-                flush_count++;
-        }
-    } 
-*/
-
     // 2. FSMs tables list update
     if(is_global_table)
     {

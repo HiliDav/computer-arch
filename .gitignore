@@ -5,6 +5,7 @@
 *.trc
 *.txt
 *.sh
+bp_main
 
 # Ignore all log files
 *.log
