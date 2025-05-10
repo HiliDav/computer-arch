@@ -6,6 +6,7 @@
 *.txt
 *.sh
 bp_main
+tests_hw1/
 
 # Ignore all log files
 *.log
