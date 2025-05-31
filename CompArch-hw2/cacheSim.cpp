@@ -45,7 +45,7 @@ class cache {
 	public:
 	unsigned mem_cyc;		// Memory access cycles
 	unsigned block_size;	// Block size in bytes
-	unsigned write_alloc;	//1 - write allocate, 0 - no write allocate
+	unsigned write_allocate;	//1 - write allocate, 0 - no write allocate
 
 	unsigned L1_size;		// log2 (L1 cache size in bytes)
 	unsigned L1_assoc;		// log2 (L1 cache associativity) (number of ways)
@@ -78,7 +78,7 @@ class cache {
 		
 		mem_cyc = mem_cycles;
 		block_size = b_size;
-		write_alloc = w_allocate;
+		write_allocate = w_allocate;
 
 		//---------------------------------
 		// Initialize L1 cache
@@ -211,14 +211,13 @@ class cache {
 				L1[way][rm_set].counter = 0; 			// Reset counter for LRU policy
 				L1[way][rm_set].tag = new_tag; 			// Update the tag
 				L1[way][rm_set].valid = true; 			// Mark as valid
-				L1[way][rm_set].dirty_bit = is_dirty; 	// Mark as dirty if needed
+				L1[way][rm_set].dirty_bit = is_dirty; 	// Mark as dirty if wtire operation
 				L1[way][rm_set].addr = new_address; 	// Update the address
 				return true; // Success
 			}
 			return false; // Not found in L1 cache
 		}
 	}
-
 
 
 
@@ -241,8 +240,10 @@ class cache {
 		// Calculate the set index
 		unsigned long int L1_set = (address >> block_size) % (L1_num_sets);
 		unsigned long int L2_set = (address >> block_size) % (L2_num_sets);
-
+		
+		// **************************
 		// 1. Check L1 cache
+		// **************************
 		L1_total++;
 		way_index = find_in_cache(L1, L1_tag, L1_set, L1_assoc);
 		if (way_index != -1) {
@@ -254,7 +255,9 @@ class cache {
 		bool was_valid = false;
 		bool was_dirty = false;
 
+		// **************************
 		// 2. L1 miss, Check L2 cache
+		// **************************
 		L2_total++;
 		way_index = find_in_cache(L2, L2_tag, L2_set, L2_assoc);
 		if (way_index != -1) {
@@ -267,9 +270,10 @@ class cache {
 			}
 			return;
 		}
-
+		// **************************
 		// 3. L2 miss, Access memory
-		//    Need to add to L2 cache
+		// **************************
+		//  Need to add to L2 cache
 		mem_total++;
 		bool was_in_L1 = false;
 		add_to_cache(L2, address, L2_tag, L2_set, L2_assoc, false, removed_address, was_valid, was_dirty);
@@ -291,11 +295,113 @@ class cache {
 	}
 
 
-	
+	// ----------------------------------------
+	// Function: write
+	// ----------------------------------------
 	void write(unsigned long int address){
 
+		int way_index;
+
+		// Calculate the tag
+		unsigned long int L1_tag = (address >> block_size) >> L1_sets;
+		unsigned long int L2_tag = (address >> block_size) >> L2_sets;
+
+		// Calculate the set index
+		unsigned long int L1_set = (address >> block_size) % (L1_num_sets);
+		unsigned long int L2_set = (address >> block_size) % (L2_num_sets);
+
+		// **************************
+		// 1. Check L1 cache
+		// **************************
+		L1_total++;
+		way_index = find_in_cache(L1, L1_tag, L1_set, L1_assoc);
+		if (way_index != -1) {
+			// L1 hit, update the block as dirty & add cycles to hit counter
+			L1[way_index][L1_set].dirty_bit = true; 
+			L1_hits++;		
+			return;
+		}
+
+		unsigned long int removed_address;
+		bool was_valid = false;
+		bool was_dirty = false;
+
+		// **************************
+		// 2. L1 miss, Check L2 cache
+		// **************************
+		L2_total++;
+		way_index = find_in_cache(L2, L2_tag, L2_set, L2_assoc);
+		if (way_index != -1) {
+			L2_hits++;
+			if(write_allocate){
+				//need to add to L1 cache
+				add_to_cache(L1, address, L1_tag, L1_set, L1_assoc, true, removed_address, was_valid, was_dirty);
+				if(was_valid && was_dirty) {
+					// If the removed block from L1 was valid and dirty, we need to write it back to L2 cache.
+					update_L1_to_L2_cache(removed_address);
+				}
+			} else {
+				// If no write allocate, just mark the block as dirty in L2 cache
+				L2[way_index][L2_set].dirty_bit = true;
+				L2[way_index][L2_set].counter = 0; 		// Reset counter for LRU policy
+			}
+			return;
+		}
+
+		// **************************
+		// 3. L2 miss, Access memory
+		// **************************
+		mem_total++;
+		if(write_allocate){
+			bool was_in_L1 = false;
+			add_to_cache(L2, address, L2_tag, L2_set, L2_assoc, false, removed_address, was_valid, was_dirty);
+			if(was_valid){			
+				// While updating, may evict block from L2.
+				// If the removed block from L2 was valid, need to update:
+				// in real implementation, we would check if the removed block is in L1 cache and if so, evacuate it to memory, to save the inclusive property.
+				// in this case, write back time is not counted, so we just need to evacuate it from L1 cache, and enter the *new* block to L1.
+				was_in_L1 = evict_and_update_L1(removed_address, L1_tag, address, true);
+			}
+			if(!was_in_L1) {
+				// If the *removed* block from L2 was not in L1 cache, we need to add the *new* block to L1 cache (it didn't enter).
+				add_to_cache(L1, address, L1_tag, L1_set, L1_assoc, true, removed_address, was_valid, was_dirty);
+				if(was_valid && was_dirty) {
+					// If removed block from L1 that was valid and dirty, we need to write it back to L2 cache.
+					update_L1_to_L2_cache(removed_address, was_dirty);
+				}
+			}
+		}
+		// if no write allocate, no need to update caches.
 	}
 
+
+	// ----------------------------------------
+	// Function: get_avg
+	// ----------------------------------------
+	// Description: This function calculates the average access time based on the hits and misses in L1, L2, and memory.
+	double get_avg() {
+		
+		double avg_time = 0.0;
+		if (L1_total > 0) {
+			avg_time += (double) L1_hits / L1_total * L1_cycles;
+		}
+		if (L2_total > 0) {
+			avg_time += (double) L2_hits / L2_total * L2_cycles;
+		}
+		if (mem_total > 0) {
+			avg_time += (double) mem_total / (L1_total + L2_total + mem_total) * mem_cyc;
+		}
+		return avg_time;
+
+
+    	return (
+			(L1_hits * L1_cycles) +
+			(L2_hits * (L1_cycles + L2_cycles)) +
+			(mem_total * (L1_cycles + L2_cycles + mem_cyc))
+		) / (double)L1_total;
+	}
+
+	
 };
 
 
@@ -384,12 +490,15 @@ int main(int argc, char **argv) {
 			// Write operation
 			my_cache.write(num);
 		}
-
 	}
 
 	double L1MissRate;
 	double L2MissRate;
 	double avgAccTime;
+
+	avgAccTime = my_cache.get_avg();
+	L1MissRate = (double)(my_cache.L1_total - my_cache.L1_hits) / my_cache.L1_total;
+	L2MissRate = (double)(my_cache.L2_total - my_cache.L2_hits) / my_cache.L2_total;
 
 	printf("L1miss=%.03f ", L1MissRate);
 	printf("L2miss=%.03f ", L2MissRate);
