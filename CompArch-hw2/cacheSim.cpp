@@ -66,8 +66,8 @@ class cache {
 	unsigned L2_total;		// Total number of accesses to L2 cache
 	unsigned mem_total;		// Total number of accesses to memory
 
-	vector<vector<cache_block>> L1;
-	vector<vector<cache_block>> L2;
+	vector <vector <cache_block> > L1;
+	vector <vector <cache_block> > L2;
 
 	// ----------------------------------------
 	// Function: cache
@@ -91,7 +91,7 @@ class cache {
 
 		unsigned L1_num_ways = (unsigned) pow(2, L1_assoc); // Number of ways in L1 cache
 		
-		L1 = vector<vector<cache_block>> (L1_num_ways);
+		L1 = vector <vector <cache_block> > (L1_num_ways);
 		for (int i = 0; i < L1_num_ways; i++)
 		{
 			L1[i] = vector<cache_block>(L1_num_sets);
@@ -108,7 +108,7 @@ class cache {
 
 		unsigned L2_num_ways = (unsigned) pow(2, L2_assoc); // Number of ways in L2 cache
 
-		L2 = vector<vector<cache_block>> (L2_num_ways);
+		L2 = vector <vector <cache_block> > (L2_num_ways);
 		for (int i = 0; i < L2_num_ways; i++)
 		{
 			L2[i] = vector<cache_block>(L2_num_sets);
@@ -130,7 +130,7 @@ class cache {
 	// Description: This function will be used to check if a block is in the cache.
 	// 				It will return the way nember if the block is found, or -1 if not found.
 	// 				It will also update the LRU counter for the blocks in the set.
-	int find_in_cache(vector<vector<cache_block>> cache, unsigned long int tag, unsigned long int set_index, unsigned assoc) {
+	int find_in_cache(vector <vector <cache_block> > &cache, unsigned long int tag, unsigned long int set_index, unsigned assoc) {
 		int way_index = -1; // -1 means not found
 		for (unsigned way = 0; way < (unsigned) pow(2, assoc); way++) {
 			
@@ -149,7 +149,7 @@ class cache {
 	// Function: add_to_cache
 	// ----------------------------------------
 	// Description: This function will add a block to the cache using LRU policy.
-	void add_to_cache(vector<vector<cache_block>> cache, unsigned long int new_addr, unsigned int tag, unsigned long int set_index, unsigned assoc,
+	void add_to_cache(vector <vector <cache_block> > &cache, unsigned long int new_addr, unsigned int tag, unsigned long int set_index, unsigned assoc,
 			bool is_dirty, unsigned long int &removed_addr, bool &was_valid, bool &was_dirty) {
 		// Find the way with the highest counter (oldest block in the set)
 		int oldest_way = 0;
@@ -215,8 +215,8 @@ class cache {
 				L1[way][rm_set].addr = new_address; 	// Update the address
 				return true; // Success
 			}
-			return false; // Not found in L1 cache
 		}
+		return false; // Not found in L1 cache
 	}
 
 
@@ -380,28 +380,10 @@ class cache {
 	// ----------------------------------------
 	// Description: This function calculates the average access time based on the hits and misses in L1, L2, and memory.
 	double get_avg() {
-		
-		double avg_time = 0.0;
-		if (L1_total > 0) {
-			avg_time += (double) L1_hits / L1_total * L1_cycles;
-		}
-		if (L2_total > 0) {
-			avg_time += (double) L2_hits / L2_total * L2_cycles;
-		}
-		if (mem_total > 0) {
-			avg_time += (double) mem_total / (L1_total + L2_total + mem_total) * mem_cyc;
-		}
-		return avg_time;
 
+		return ((((double)L1_total) * L1_cycles) + (L2_total * L2_cycles) + ((mem_total) * mem_cyc)) / ((double)L1_total);
 
-    	return (
-			(L1_hits * L1_cycles) +
-			(L2_hits * (L1_cycles + L2_cycles)) +
-			(mem_total * (L1_cycles + L2_cycles + mem_cyc))
-		) / (double)L1_total;
 	}
-
-	
 };
 
 
@@ -470,18 +452,18 @@ int main(int argc, char **argv) {
 		}
 
 		// DEBUG - remove this line
-		cout << "operation: " << operation;
+		// cout << "operation: " << operation;
 
 		string cutAddress = address.substr(2); // Removing the "0x" part of the address
 
 		// DEBUG - remove this line
-		cout << ", address (hex)" << cutAddress;
+		// cout << ", address (hex)" << cutAddress;
 
 		unsigned long int num = 0;
 		num = strtoul(cutAddress.c_str(), NULL, 16);
 
 		// DEBUG - remove this line
-		cout << " (dec) " << num << endl;
+		// cout << " (dec) " << num << endl;
 
 		if (operation == 'r') {
 			// Read operation
